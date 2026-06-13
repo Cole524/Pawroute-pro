@@ -184,6 +184,23 @@
 </style>
 </head>
 <body>
+
+<div id="key-overlay" style="display:none;position:fixed;inset:0;background:rgba(13,27,46,0.97);z-index:9999;display:flex;align-items:center;justify-content:center;">
+  <div style="background:#1A2E47;border:1px solid #243F5E;border-radius:14px;padding:32px;max-width:440px;width:90%;text-align:center;">
+    <div style="font-size:36px;margin-bottom:12px;">🐾</div>
+    <div style="font-family:sans-serif;font-size:22px;font-weight:700;color:#E8EFF8;margin-bottom:8px;">PawRoute Pro</div>
+    <div style="font-family:sans-serif;font-size:13px;color:#7A9BBF;margin-bottom:24px;line-height:1.6;">To enable the AI assistant, paste your Claude API key below.<br>You only need to do this once.</div>
+    <input id="key-input" type="password" placeholder="sk-ant-..." style="width:100%;background:#0D1B2E;border:1px solid #243F5E;border-radius:8px;color:#E8EFF8;font-size:13px;padding:10px 14px;font-family:sans-serif;margin-bottom:10px;"/>
+    <button onclick="saveKey()" style="width:100%;background:#3D9BE9;border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:600;padding:11px;cursor:pointer;font-family:sans-serif;margin-bottom:10px;">Save & Open App</button>
+    <div style="font-size:11px;color:#4A6B8A;line-height:1.6;">Get your free key at <strong style="color:#7A9BBF;">console.anthropic.com</strong><br>Sign up → API Keys → Create Key<br><br>Your key is saved only on this device and never shared.</div>
+  </div>
+</div>
+
+<div id="key-banner" style="display:none;background:#142338;border-bottom:1px solid #243F5E;padding:6px 24px;display:flex;justify-content:space-between;align-items:center;">
+  <span style="font-size:11px;color:#7A9BBF;">🤖 AI Assistant: <span id="key-status-text" style="color:#2ECC71">Active</span></span>
+  <button onclick="changeKey()" style="font-size:11px;color:#7A9BBF;background:none;border:none;cursor:pointer;text-decoration:underline;">Change API key</button>
+</div>
+
 <div class="shell">
 <aside class="sidebar">
   <div class="sidebar-logo">
@@ -452,7 +469,7 @@ async function sendChat(){
   const sendBtn=document.getElementById('send-btn');sendBtn.disabled=true;
   const typingId='t'+Date.now();appendTyping(typingId);
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':'sk-ant-api03--9U...1wAA','anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:buildSystemPrompt(),messages:chatHistory.slice(-10)})});
+    const apiKey=localStorage.getItem('pawApiKey')||'';if(!apiKey){appendMsg('ai','Please add your API key first — click the link at the top of the page to set it up.');sendBtn.disabled=false;return;}const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:buildSystemPrompt(),messages:chatHistory.slice(-10)})});
     const data=await res.json();removeTyping(typingId);
     const reply=data.content?data.content.map(b=>b.text||'').join(''):'Sorry, I had trouble responding. Please try again.';
     appendMsg('ai',reply);chatHistory.push({role:'assistant',content:reply});
@@ -577,7 +594,36 @@ function renderDistance(){const gasP=parseFloat(document.getElementById('d-gas')
 function calcGrowth(){const cl=parseFloat(document.getElementById('g-clients').value)||12,pr=parseFloat(document.getElementById('g-price').value)||116,hr=parseFloat(document.getElementById('g-hours').value)||1.6,gas=parseFloat(document.getElementById('g-gas').value)||109,gross=cl*pr,net=gross-gas,rph=gross/(cl*hr),netRph=net/(cl*hr),annual=net*52;document.getElementById('growth-results').innerHTML=`<div class="sim-result"><div class="sr-label">Gross/week</div><div class="sr-val">$${gross.toLocaleString()}</div></div><div class="sim-result"><div class="sr-label">Net/week</div><div class="sr-val">$${net.toFixed(0)}</div></div><div class="sim-result"><div class="sr-label">Gross $/hr</div><div class="sr-val">$${rph.toFixed(0)}</div></div><div class="sim-result highlight"><div class="sr-label">Net $/hr</div><div class="sr-val">$${netRph.toFixed(0)}</div></div><div class="sim-result highlight"><div class="sr-label">Annual net</div><div class="sr-val">$${(annual/1000).toFixed(1)}k</div></div>`;}
 function renderGrowthTips(){document.getElementById('growth-tips').innerHTML=[{i:'🔻',t:'Drop or reprice Carbone, Deluque & Fabianic',b:'These 3 earn $31–40/hr. Raising to $90–105 or replacing them lifts your average by ~$10/hr.'},{i:'🐾',t:'Implement multi-dog surcharge',b:'$30 per extra dog applied immediately. Update dog counts in All Clients, then check the Surcharge tab.'},{i:'📍',t:'Group by neighborhood',b:'Lighthouse Point clients together, Boca on a separate day. Saves 20–30 miles/week (~$13).'},{i:'💵',t:'Raise base rates $12–15 across the board',b:'12 clients × $12 = $144 more/week, ~$7,500/year.'},{i:'⚡',t:'Add 2 premium last-minute slots/week',b:'$25 above normal = $2,600/year extra with zero extra hours.'}].map(t=>`<div style="background:var(--navy-card);border:1px solid var(--navy-border);border-radius:var(--radius);padding:12px 14px;margin-bottom:7px"><div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:5px">${t.i} ${t.t}</div><div style="font-size:12px;color:var(--text-muted);line-height:1.6">${t.b}</div></div>`).join('');}
 document.getElementById('log-date').value=new Date().toISOString().slice(0,10);
-renderDashMetrics();renderDashList();calcWeekly();calcGrowth();renderGrowthTips();
+
+function saveKey() {
+  const key = document.getElementById('key-input').value.trim();
+  if (!key || !key.startsWith('sk-')) {
+    alert('Please paste a valid Claude API key (starts with sk-ant-...)');
+    return;
+  }
+  localStorage.setItem('pawApiKey', key);
+  document.getElementById('key-overlay').style.display = 'none';
+  document.getElementById('key-banner').style.display = 'flex';
+  document.getElementById('key-status-text').textContent = 'Active';
+}
+
+function changeKey() {
+  document.getElementById('key-input').value = '';
+  document.getElementById('key-overlay').style.display = 'flex';
+}
+
+function checkKey() {
+  const key = localStorage.getItem('pawApiKey');
+  if (key) {
+    document.getElementById('key-overlay').style.display = 'none';
+    document.getElementById('key-banner').style.display = 'flex';
+  } else {
+    document.getElementById('key-overlay').style.display = 'flex';
+    document.getElementById('key-banner').style.display = 'none';
+  }
+}
+
+renderDashMetrics();renderDashList();calcWeekly();calcGrowth();renderGrowthTips();checkKey();
 </script>
 </body>
 </html>
