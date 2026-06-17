@@ -537,7 +537,7 @@ async function sendChat(){
   const sendBtn=document.getElementById('send-btn');sendBtn.disabled=true;
   const typingId='t'+Date.now();appendTyping(typingId);
   try{
-    const apiKey=localStorage.getItem('pawApiKey')||'';if(!apiKey){appendMsg('ai','Please add your API key first — click the link at the top of the page to set it up.');sendBtn.disabled=false;return;}const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:buildSystemPrompt(),messages:chatHistory.slice(-10)})});
+    const apiKey=localStorage.getItem('pawApiKey')||'';if(!apiKey){appendMsg('ai','Please add your API key first — tap the menu and look for the key setup option.');sendBtn.disabled=false;return;}const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:buildSystemPrompt(),messages:chatHistory.slice(-10),apiKey})});
     const data=await res.json();removeTyping(typingId);
     const reply=data.content?data.content.map(b=>b.text||'').join(''):'Sorry, I had trouble responding. Please try again.';
     appendMsg('ai',reply);chatHistory.push({role:'assistant',content:reply});
